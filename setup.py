@@ -10,5 +10,5 @@ setup(name='ms_process',
               'mzxml = ms_process.cli.mzxml:main',
               'mzml = ms_process.cli.mzml:main',
           ]
-      }, install_requires=['ujson', 'numpy', 'scipy', 'lxml']
+      }, install_requires=['ujson', 'numpy', 'scipy', 'lxml', 'tqdm']
       )
