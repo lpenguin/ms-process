@@ -9,7 +9,7 @@ from scipy.signal import savgol_filter
 import os
 
 from .data import Spectrum, BinaryDataArray, DataKind
-from .xml_util import Event, iterate_events, cleanup
+from .xml_util import Event, cleanup, LineEventsParser, xpath, ns
 
 
 class Filter(abc.ABC):
@@ -29,7 +29,7 @@ class ElectricNoiseFilter(Filter):
         threshold = self.threshold_multiplier * min_int
         new_intensity = intensity.data - threshold
         new_intensity[new_intensity < 0] = 0
-        intensity.update_data(new_intensity)
+        intensity.data = new_intensity
 
 
 class ResamplerFilter(Filter):
@@ -48,8 +48,8 @@ class ResamplerFilter(Filter):
             max_mz = mz.data.max()
         new_mz = np.arange(min_mz, max_mz, self.sampling_rate, dtype=mz.data.dtype)
         new_intensity = np.interp(new_mz, mz.data, intensity.data).astype(intensity.data.dtype)
-        mz.update_data(new_mz)
-        intensity.update_data(new_intensity)
+        mz.data = new_mz
+        intensity.data = new_intensity
 
 
 class SGolayFilter(Filter):
@@ -64,7 +64,25 @@ class SGolayFilter(Filter):
             polyorder=self.polyorder
         ).astype(spectrum.intensity.data.dtype)
         new_intensity[new_intensity < 0] = 0
-        spectrum.intensity.update_data(new_intensity)
+        spectrum.intensity.data = new_intensity
+
+
+class AsFloat32Filter(Filter):
+    def __init__(self):
+        self.dtype = np.dtype(np.float32).newbyteorder('<')
+
+    def to_f32(self, ba: BinaryDataArray):
+        ba.data = ba.data.astype(self.dtype)
+        for e in xpath(ba.elem, 'ns:cvParam[@accession="MS:1000523"]'):
+            e.getparent().remove(e)
+        attrib = dict(cvRef="MS", accession="MS:1000521", name="32-bit float")
+
+        f32_el = etree.Element('cvParam', attrib=attrib, nsmap=ns, prefix='ns')
+        ba.elem.insert(0, f32_el)
+
+    def apply_mut(self, spectrum: Spectrum):
+        self.to_f32(spectrum.mz)
+        self.to_f32(spectrum.intensity)
 
 
 @contextmanager
@@ -82,57 +100,72 @@ def open_with_progress(filename):
     progress.close()
 
 
-class SpectrumProcessor:
+class SpectrumIterator:
     @staticmethod
-    def _process_spectrum(events: Iterable[Event])-> Spectrum:
+    def _process_spectrum(parser: LineEventsParser)-> Spectrum:
         binary_arrays = {}  # type: Dict[DataKind, BinaryDataArray]
-        for line, (action, elem) in events:
-            if (action, elem.tag) == ('end', '{http://psi.hupo.org/ms/mzml}spectrum'):
-                return Spectrum(elem, binary_arrays)
-            elif (action, elem.tag) == ('end', '{http://psi.hupo.org/ms/mzml}binaryDataArray'):
-                arr = BinaryDataArray.from_element(elem)
-                binary_arrays[arr.kind] = arr
+        for _, events in parser:
+            for (action, elem) in events:
+                if (action, elem.tag) == ('end', '{http://psi.hupo.org/ms/mzml}spectrum'):
+                    return Spectrum(elem, binary_arrays)
+                elif (action, elem.tag) == ('end', '{http://psi.hupo.org/ms/mzml}binaryDataArray'):
+                    arr = BinaryDataArray.from_element(elem)
+                    binary_arrays[arr.kind] = arr
         assert False
 
     def process(self, in_filename: str):
         with open_with_progress(in_filename) as in_f:
-            events = iterate_events(in_f)
-            for line, (action, elem) in events:
-                if (action, elem.tag) == ('start', '{http://psi.hupo.org/ms/mzml}spectrum'):
-                    spectrum = self._process_spectrum(events)
-                    cleanup(spectrum.elem)
-                    yield spectrum
+            parser = LineEventsParser(in_f)
+            for _, events in parser:
+                for (action, elem) in events:
+                    if (action, elem.tag) == ('start', '{http://psi.hupo.org/ms/mzml}spectrum'):
+                        spectrum = self._process_spectrum(parser)
+                        cleanup(spectrum.elem)
+                        yield spectrum
+
 
 class Processor:
     def __init__(self, filters: List[Filter]):
         self.filters = filters
 
     @staticmethod
-    def _process_spectrum(events: Iterable[Event])-> Spectrum:
+    def _process_spectrum(parser: LineEventsParser)-> Spectrum:
         binary_arrays = {}  # type: Dict[DataKind, BinaryDataArray]
-        for line, (action, elem) in events:
-            if (action, elem.tag) == ('end', '{http://psi.hupo.org/ms/mzml}spectrum'):
-                return Spectrum(elem, binary_arrays)
-            elif (action, elem.tag) == ('end', '{http://psi.hupo.org/ms/mzml}binaryDataArray'):
-                arr = BinaryDataArray.from_element(elem)
-                binary_arrays[arr.kind] = arr
+        for _, events in parser:
+            for action, elem in events:
+                if (action, elem.tag) == ('end', '{http://psi.hupo.org/ms/mzml}spectrum'):
+                    return Spectrum(elem, binary_arrays)
+                elif (action, elem.tag) == ('end', '{http://psi.hupo.org/ms/mzml}binaryDataArray'):
+                    arr = BinaryDataArray.from_element(elem)
+                    binary_arrays[arr.kind] = arr
         assert False
 
     def process(self, in_filename: str, out_filename: str):
-        with open(out_filename, 'w') as out_f, open_with_progress(in_filename) as in_f:
-            events = iterate_events(in_f)
+        with open(out_filename, 'w') as out_f, \
+                open_with_progress(in_filename) as in_f:
+            parser = LineEventsParser(in_f)
+            for line, events in parser:
+                # TODO: ugly code
+                wrote_line = False
+                for action, elem in events:
+                    if (action, elem.tag) == ('start', '{http://psi.hupo.org/ms/mzml}spectrum'):
+                        spectrum = self._process_spectrum(parser)
 
-            for line, (action, elem) in events:
-                if (action, elem.tag) == ('start', '{http://psi.hupo.org/ms/mzml}spectrum'):
-                    spectrum = self._process_spectrum(events)
+                        for filter_ in self.filters:
+                            filter_.apply_mut(spectrum)
 
-                    for filter_ in self.filters:
-                        filter_.apply_mut(spectrum)
-                    spectrum.elem.attrib['defaultArrayLength'] = str(int(spectrum.intensity.data.shape[0]))
-                    out_f.write(etree.tostring(spectrum.elem).decode())
-                    out_f.write('\n')
-                    cleanup(spectrum.elem)
-                else:
-                    out_f.write(line)
-                    if action == 'end':
-                        cleanup(elem)
+                        spectrum.mz.update_elem()
+                        spectrum.intensity.update_elem()
+
+                        spectrum.elem.attrib['defaultArrayLength'] = str(int(spectrum.intensity.data.shape[0]))
+                        out_f.write(etree.tostring(spectrum.elem).decode())
+                        out_f.write('\n')
+                        cleanup(spectrum.elem)
+                    else:
+                        # TODO: ugly code
+                        if not wrote_line:
+                            wrote_line = True
+                            out_f.write(line)
+                        if action == 'end':
+                            cleanup(elem)
+

@@ -71,8 +71,7 @@ class BinaryDataArray:
             data=data,
         )
 
-    def update_data(self, data: np.ndarray):
-        self.data = data
+    def update_elem(self):
         data_bytes = self.data.tobytes()
         if self.compression == Compression.zlib:
             data_bytes = zlib.compress(data_bytes)
