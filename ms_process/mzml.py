@@ -3,8 +3,8 @@ from typing import Optional, Tuple
 import numpy as np
 import sys
 
-from .processing.processor import Processor, \
-    ElectricNoiseFilter, ResamplerFilter, SGolayFilter, SpectrumIterator, AsFloat32Filter
+from .processing.processor import ElectricNoiseFilter, ResamplerFilter, SGolayFilter, SpectrumIterator, AsFloat32Filter, \
+    process_mzml
 
 
 def process_file(in_filename: str,
@@ -31,10 +31,9 @@ def process_file(in_filename: str,
     sys.stderr.write("min mz: {min_mz}, max_mz: {max_mz}\n".format(min_mz=min_mz, max_mz=max_mz))
     sys.stderr.write("Processing data...\n")
     filters = [
-        ElectricNoiseFilter(threshold_multiplier=3),
+        ElectricNoiseFilter(threshold_multiplier=threshold_multiplier),
         ResamplerFilter(sampling_rate=0.0043, mz_range=(min_mz, max_mz)),
         SGolayFilter(window_length=11, polyorder=4),
         AsFloat32Filter(),
     ]
-    processor = Processor(filters)
-    processor.process(in_filename, out_filename)
+    process_mzml(in_filename, out_filename, filters)

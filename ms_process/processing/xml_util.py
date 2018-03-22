@@ -1,29 +1,29 @@
-from typing import List, Union, Optional, Tuple, TextIO, Iterable
+from typing import List, Union, Optional, Tuple, TextIO, Iterable, Iterator
 
 from lxml import etree
 
 ns = {'ns': 'http://psi.hupo.org/ms/mzml'}
 
 
-def cleanup(elem: etree._Element):
+def cleanup(elem: etree.Element):
     elem.clear()
     while elem.getprevious() is not None:
         del elem.getparent()[0]  # clean up preceding siblings
 
 
-def xpath(element: etree._Element, xpath: str) -> List[Union[etree._Element, str]]:
-    return element.xpath(xpath, namespaces=ns)
+def xpath(element: etree.Element, path: str) -> List[Union[etree.Element, str]]:
+    return element.xpath(path, namespaces=ns)
 
 
-def attr(element: etree._Element, xpath: str) -> Optional[str]:
-    res = element.xpath(xpath + '/@value', namespaces=ns)
+def attr(element: etree.Element, path: str) -> Optional[str]:
+    res = element.xpath(path + '/@value', namespaces=ns)
     if res:
         return res[0]
     else:
         return None
 
 
-Event = Tuple[str, etree._Element]
+Event = Tuple[str, etree.Element]
 # Event = Tuple[str, Tuple[str, etree._Element]]
 
 
@@ -36,9 +36,9 @@ Event = Tuple[str, etree._Element]
 
 
 class LineEventsParser:
-    def __init__(self, f: TextIO):
+    def __init__(self, f: Iterable[str]):
         self.parser = etree.XMLPullParser(("start", "end"))
-        self.f_it = iter(f)  # type: Iterable[str]
+        self.f_it = iter(f)
 
     def advance(self)->str:
         line = next(self.f_it)
@@ -54,5 +54,8 @@ class LineEventsParser:
                 line = self.advance()
                 events = self.events()
                 yield line, events
+                # for action, elem in events:
+                #     if action == 'end':
+                #         cleanup(elem)
             except StopIteration:
                 break
