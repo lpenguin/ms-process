@@ -95,7 +95,7 @@ class Spectrum:
     def __init__(self, elem: etree._Element, binary_arrays: Dict[DataKind, BinaryDataArray]):
         self.elem = elem
         self.binary_arrays = binary_arrays
-        self.ms_level = attr(elem, 'ns:cvParam[@accession="MS:1000511"]')
+        self.ms_level = int(attr(elem, 'ns:cvParam[@accession="MS:1000511"]'))
 
     @property
     def intensity(self)->BinaryDataArray:

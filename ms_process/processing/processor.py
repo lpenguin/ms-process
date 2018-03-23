@@ -171,25 +171,25 @@ def process_mzml(in_filename: str, out_filename: str, filters: List[Filter]):
                         return
 
                     if (action, elem.tag) == ('start', '{http://psi.hupo.org/ms/mzml}spectrum'):
+                        offset = out_f.tell()
                         spectrum = parse_spectrum(parser)
                         spectrum_id = spectrum.elem.attrib['id']
-                        offset = out_f.tell()
                         if 'scan' not in spectrum_id:
                             spectrum_index = spectrum.elem.attrib['index']
                             spectrum_id = 'scan={} '.format(spectrum_index) + spectrum_id
                         spectrum.elem.attrib['id'] = spectrum_id
+                        spectrum_offsets.append((spectrum_id, offset))
 
-                        for filter_ in filters:
-                            filter_.apply_mut(spectrum)
-
-                        spectrum.mz.update_elem()
-                        spectrum.intensity.update_elem()
+                        if spectrum.ms_level == 1:
+                            for filter_ in filters:
+                                filter_.apply_mut(spectrum)
+                            spectrum.mz.update_elem()
+                            spectrum.intensity.update_elem()
 
                         spectrum.elem.attrib['defaultArrayLength'] = str(int(spectrum.intensity.data.shape[0]))
                         mz_data = spectrum.mz.data
                         spectrum.elem.insert(0, cvparam("MS:1000528", str(mz_data.min()), "lowest observed m/z"))
                         spectrum.elem.insert(0, cvparam("MS:1000527", str(mz_data.max()), "highest observed m/z"))
-                        spectrum_offsets.append((spectrum_id, offset))
 
                         out_f.write(etree.tostring(spectrum.elem).decode())
                         out_f.write('\n')
