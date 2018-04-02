@@ -22,10 +22,6 @@ def process_file(in_filename: str,
                 continue
             min_mz = min(min_mz, spectrum.mz.data.min())
             max_mz = max(max_mz, spectrum.mz.data.max())
-            # step_mean = np.abs(spectrum.mz.data[:-1] - spectrum.mz.data[1:]).mean()
-            # step_std = np.abs(spectrum.mz.data[:-1] - spectrum.mz.data[1:]).std()
-            # stats.append((min_mz, max_mz, step))
-            # print("{}\t{}\t{}\t{}".format(min_mz, max_mz, step_mean, step_std))
     else:
         min_mz, max_mz = mz_min_max
     sys.stderr.write("min mz: {min_mz}, max_mz: {max_mz}\n".format(min_mz=min_mz, max_mz=max_mz))
