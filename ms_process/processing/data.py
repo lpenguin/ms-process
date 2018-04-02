@@ -25,7 +25,8 @@ class Compression(Enum):
 
 
 class BinaryDataArray:
-    def __init__(self, elem: etree._Element, kind: DataKind, precision: Precision, compression: Compression, data: np.ndarray):
+    def __init__(self, elem: etree.Element, kind: DataKind, precision: Precision, compression: Compression,
+                 data: np.ndarray):
         self.elem = elem
         self.data = data
         self.compression = compression
@@ -33,7 +34,7 @@ class BinaryDataArray:
         self.kind = kind
 
     @staticmethod
-    def from_element(elem: etree._Element) -> 'BinaryDataArray':
+    def from_element(elem: etree.Element) -> 'BinaryDataArray':
         if xpath(elem, 'ns:cvParam[@accession="MS:1000515"]'):
             kind = DataKind.intensity
         elif xpath(elem, 'ns:cvParam[@accession="MS:1000514"]'):
@@ -92,17 +93,15 @@ class BinaryDataArray:
 
 
 class Spectrum:
-    def __init__(self, elem: etree._Element, binary_arrays: Dict[DataKind, BinaryDataArray]):
+    def __init__(self, elem: etree.Element, binary_arrays: Dict[DataKind, BinaryDataArray]):
         self.elem = elem
         self.binary_arrays = binary_arrays
         self.ms_level = int(attr(elem, 'ns:cvParam[@accession="MS:1000511"]'))
 
     @property
-    def intensity(self)->BinaryDataArray:
+    def intensity(self) -> BinaryDataArray:
         return self.binary_arrays[DataKind.intensity]
 
     @property
-    def mz(self)->BinaryDataArray:
+    def mz(self) -> BinaryDataArray:
         return self.binary_arrays[DataKind.mz]
-
-
