@@ -3,8 +3,8 @@ from typing import Optional, Tuple
 import numpy as np
 import sys
 
-from .processing.processor import ElectricNoiseFilter, ResamplerFilter, SGolayFilter, SpectrumIterator, AsFloat32Filter, \
-    process_mzml
+from .processing.processor import SpectrumIterator, process_mzml
+from ms_process.processing.filters import ElectricNoiseFilter, ResamplerFilter, SGolayFilter, AsFloat32Filter
 
 
 def process_file(in_filename: str,
