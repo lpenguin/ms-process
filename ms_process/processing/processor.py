@@ -144,7 +144,11 @@ def process_mzml(in_filename: str, out_filename: str, filters: List[Filter]):
             open(out_filename, 'w') as out_f:
         parser = LineEventsParser(in_f)
 
-        def _process_header():
+        def cvparam(accession: str, value: str, name: str):
+            attrib = dict(cvRef="MS", accession=accession, value=value, name=name)
+            return etree.Element('cvParam', attrib=attrib, nsmap=ns)
+
+        def _handle_header():
             out_f.write('<indexedmzML xmlns="http://psi.hupo.org/ms/mzml" '
                         'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
                         'xsi:schemaLocation="http://psi.hupo.org/ms/mzml '
@@ -153,15 +157,29 @@ def process_mzml(in_filename: str, out_filename: str, filters: List[Filter]):
                 for action, elem in events:
                     if (action, elem.tag) == ('start', '{http://psi.hupo.org/ms/mzml}mzML'):
                         out_f.write(line)
-                        _process_mzml()
+                        _handle_mzml()
                         _write_index_and_end()
                         return
 
-        def _process_mzml():
-            def cvparam(accession: str, value: str, name: str):
-                attrib = dict(cvRef="MS", accession=accession, value=value, name=name)
-                return etree.Element('cvParam', attrib=attrib, nsmap=ns)
+        def _process_spectrum(spectrum: Spectrum):
+            spectrum_id = spectrum.elem.attrib['id']
+            if 'scan' not in spectrum_id:
+                spectrum_index = spectrum.elem.attrib['index']
+                spectrum_id = 'scan={} '.format(spectrum_index) + spectrum_id
+            spectrum.elem.attrib['id'] = spectrum_id
 
+            if spectrum.ms_level == 1:
+                for filter_ in filters:
+                    filter_.apply_mut(spectrum)
+                spectrum.mz.update_elem()
+                spectrum.intensity.update_elem()
+
+            spectrum.elem.attrib['defaultArrayLength'] = str(int(spectrum.intensity.data.shape[0]))
+            mz_data = spectrum.mz.data
+            spectrum.elem.insert(0, cvparam("MS:1000528", str(mz_data.min()), "lowest observed m/z"))
+            spectrum.elem.insert(0, cvparam("MS:1000527", str(mz_data.max()), "highest observed m/z"))
+
+        def _handle_mzml():
             for line, events in parser:
                 wrote_line = False
                 for action, elem in events:
@@ -173,24 +191,8 @@ def process_mzml(in_filename: str, out_filename: str, filters: List[Filter]):
                     if (action, elem.tag) == ('start', '{http://psi.hupo.org/ms/mzml}spectrum'):
                         offset = out_f.tell()
                         spectrum = parse_spectrum(parser)
-                        spectrum_id = spectrum.elem.attrib['id']
-                        if 'scan' not in spectrum_id:
-                            spectrum_index = spectrum.elem.attrib['index']
-                            spectrum_id = 'scan={} '.format(spectrum_index) + spectrum_id
-                        spectrum.elem.attrib['id'] = spectrum_id
-                        spectrum_offsets.append((spectrum_id, offset))
-
-                        if spectrum.ms_level == 1:
-                            for filter_ in filters:
-                                filter_.apply_mut(spectrum)
-                            spectrum.mz.update_elem()
-                            spectrum.intensity.update_elem()
-
-                        spectrum.elem.attrib['defaultArrayLength'] = str(int(spectrum.intensity.data.shape[0]))
-                        mz_data = spectrum.mz.data
-                        spectrum.elem.insert(0, cvparam("MS:1000528", str(mz_data.min()), "lowest observed m/z"))
-                        spectrum.elem.insert(0, cvparam("MS:1000527", str(mz_data.max()), "highest observed m/z"))
-
+                        _process_spectrum(spectrum)
+                        spectrum_offsets.append((spectrum.elem.attrib['id'], offset))
                         out_f.write(etree.tostring(spectrum.elem).decode())
                         out_f.write('\n')
                         cleanup(spectrum.elem)
@@ -215,4 +217,4 @@ def process_mzml(in_filename: str, out_filename: str, filters: List[Filter]):
             out_f.write('<indexListOffset>{}</indexListOffset>\n'.format(index_list_offset))
             out_f.write('</indexedmzML>\n')
 
-        _process_header()
+        _handle_header()

@@ -18,7 +18,7 @@ def process_file(in_filename: str,
         max_mz = -np.inf
 
         for i, spectrum in enumerate(spectrum_processor.process(in_filename)):
-            if spectrum.ms_level != '1':
+            if spectrum.ms_level != 1:
                 continue
             min_mz = min(min_mz, spectrum.mz.data.min())
             max_mz = max(max_mz, spectrum.mz.data.max())
