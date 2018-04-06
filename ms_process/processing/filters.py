@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 import numpy as np
 from lxml import etree
@@ -11,7 +11,7 @@ from ms_process.processing.xml_util import xpath, ns
 
 class Filter(abc.ABC):
     @abc.abstractmethod
-    def apply_mut(self, spectrum: Spectrum):
+    def apply_mut(self, spectrum: Spectrum, prev_spectra: List[Spectrum]):
         pass
 
 
@@ -19,7 +19,7 @@ class ElectricNoiseFilter(Filter):
     def __init__(self, threshold_multiplier: int):
         self.threshold_multiplier = threshold_multiplier
 
-    def apply_mut(self, spectrum: Spectrum):
+    def apply_mut(self, spectrum: Spectrum, prev_spectra: List[Spectrum]):
         intensity = spectrum.intensity
 
         min_int = intensity.data[intensity.data > 0].min()
@@ -34,7 +34,7 @@ class ResamplerFilter(Filter):
         self.mz_range = mz_range
         self.sampling_rate = sampling_rate
 
-    def apply_mut(self, spectrum: Spectrum):
+    def apply_mut(self, spectrum: Spectrum, prev_spectra: List[Spectrum]):
         mz = spectrum.mz
         intensity = spectrum.intensity
 
@@ -54,7 +54,7 @@ class SGolayFilter(Filter):
         self.window_length = window_length
         self.polyorder = polyorder
 
-    def apply_mut(self, spectrum: Spectrum):
+    def apply_mut(self, spectrum: Spectrum, prev_spectra: List[Spectrum]):
         new_intensity = savgol_filter(
             x=spectrum.intensity.data,
             window_length=self.window_length,
@@ -77,6 +77,6 @@ class AsFloat32Filter(Filter):
         f32_el = etree.Element('cvParam', attrib=attrib, nsmap=ns, prefix='ns')
         ba.elem.insert(0, f32_el)
 
-    def apply_mut(self, spectrum: Spectrum):
+    def apply_mut(self, spectrum: Spectrum, prev_spectra: List[Spectrum]):
         self.to_f32(spectrum.mz)
         self.to_f32(spectrum.intensity)

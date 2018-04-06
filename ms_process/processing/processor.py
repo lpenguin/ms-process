@@ -1,9 +1,10 @@
+import os
+from collections import deque
 from contextlib import contextmanager
 from typing import Dict, List, Tuple
 
 import tqdm
 from lxml import etree
-import os
 
 from ms_process.processing.filters import Filter
 from .data import Spectrum, BinaryDataArray, DataKind
@@ -63,6 +64,7 @@ def parse_spectrum(parser: LineEventsParser)-> Spectrum:
 
 def process_mzml(in_filename: str, out_filename: str, filters: List[Filter]):
     spectrum_offsets = []  # type: List[Tuple[str, int]]
+    last_ms1_spectra = deque(maxlen=5)
 
     with open_with_progress(in_filename) as in_f, \
             open(out_filename, 'w') as out_f:
@@ -94,9 +96,10 @@ def process_mzml(in_filename: str, out_filename: str, filters: List[Filter]):
 
             if spectrum.ms_level == 1:
                 for filter_ in filters:
-                    filter_.apply_mut(spectrum)
+                    filter_.apply_mut(spectrum, list(last_ms1_spectra))
                 spectrum.mz.update_elem()
                 spectrum.intensity.update_elem()
+                last_ms1_spectra.append(spectrum)
 
             spectrum.elem.attrib['defaultArrayLength'] = str(int(spectrum.intensity.data.shape[0]))
             mz_data = spectrum.mz.data
