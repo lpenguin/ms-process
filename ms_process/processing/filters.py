@@ -1,4 +1,5 @@
 import abc
+import math
 from typing import Optional, Tuple, List
 
 import numpy as np
@@ -30,19 +31,20 @@ class ElectricNoiseFilter(Filter):
 
 
 class ResamplerFilter(Filter):
-    def __init__(self, sampling_rate: float, mz_range: Optional[Tuple[float, float]]=None):
-        self.mz_range = mz_range
+    def __init__(self, sampling_rate: float, central_mz: float):
+        self.central_mz = central_mz
         self.sampling_rate = sampling_rate
 
     def apply_mut(self, spectrum: Spectrum, prev_spectra: List[Spectrum]):
         mz = spectrum.mz
         intensity = spectrum.intensity
 
-        if self.mz_range is not None:
-            min_mz, max_mz = self.mz_range
-        else:
-            min_mz = mz.data.min()
-            max_mz = mz.data.max()
+        min_mz = self.central_mz - \
+                 math.floor((self.central_mz - mz.data.min()) / self.sampling_rate) * self.sampling_rate
+
+        max_mz = self.central_mz + \
+                 math.ceil((mz.data.max() - self.central_mz) / self.sampling_rate) * self.sampling_rate
+
         new_mz = np.arange(min_mz, max_mz, self.sampling_rate, dtype=mz.data.dtype)
         new_intensity = np.interp(new_mz, mz.data, intensity.data).astype(intensity.data.dtype)
         mz.data = new_mz

@@ -9,26 +9,17 @@ def main():
 
     filter_parser = subparsers.add_parser('filter')
     filter_parser.add_argument('--threshold-multiplier', default=3, type=int)
-    filter_parser.add_argument('--mz-min-max', type=str, help='in format \"min:max\"')
+    filter_parser.add_argument('--central-mz', '-c', type=float, default=800, help='central mz in resampler')
     filter_parser.add_argument('in_file')
     filter_parser.add_argument('out_file')
 
     args = parser.parse_args()
     if args.command == 'filter':
-        mz_min_max = None
-        if args.mz_min_max:
-            mz_min_max = [
-                float(t)
-                for t in args.mz_min_max.split(':')
-            ]
-            if len(mz_min_max) != 2:
-                parser.error("Invalid --mz-min-max format")
-
         process_file(
             args.in_file,
             args.out_file,
             threshold_multiplier=args.threshold_multiplier,
-            mz_min_max=mz_min_max
+            central_mz=args.central_mz,
         )
 
 
