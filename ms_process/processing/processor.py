@@ -64,7 +64,7 @@ def parse_spectrum(parser: LineEventsParser)-> Spectrum:
 
 def process_mzml(in_filename: str, out_filename: str, filters: List[Filter]):
     spectrum_offsets = []  # type: List[Tuple[str, int]]
-    last_ms1_spectra = deque(maxlen=5)
+    last_ms1_spectra = deque(maxlen=10)
 
     with open_with_progress(in_filename) as in_f, \
             open(out_filename, 'w') as out_f:
