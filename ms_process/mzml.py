@@ -32,4 +32,4 @@ def process_file(in_filename: str,
         SGolayFilter(window_length=11, polyorder=4),
         AsFloat32Filter(),
     ]
-    process_mzml(in_filename, out_filename, filters)
+    process_mzml(in_filename, out_filename, filters, last_ms1_specra_count=10)
