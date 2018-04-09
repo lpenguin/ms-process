@@ -1,6 +1,6 @@
 import argparse
 
-from ms_process.mzxml_fix import fix_mz_ranges, validate, Precision
+from ms_process.mzxml import fix_mz_ranges, validate, Precision
 
 
 def main():
