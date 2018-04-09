@@ -25,8 +25,8 @@ class ElectricNoiseFilter(Filter):
 
         min_int = intensity.data[intensity.data > 0].min()
         threshold = self.threshold_multiplier * min_int
-        new_intensity = intensity.data - threshold
-        new_intensity[new_intensity < 0] = 0
+        new_intensity = intensity.data.copy()
+        new_intensity[new_intensity < threshold] = 0
         intensity.data = new_intensity
 
 
