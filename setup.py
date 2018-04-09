@@ -3,6 +3,7 @@ from setuptools import setup
 setup(name='ms_process',
       packages=['ms_process',
                 'ms_process.cli',
+                'ms_process.processing',
                 ],
       version='0.1.0',
       entry_points={
