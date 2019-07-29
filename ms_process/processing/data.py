@@ -191,7 +191,7 @@ class BinaryDataArray:
 
 
 class Spectrum:
-    retention_time: float
+    retention_time_seconds: float  # Seconds
     ms_level: float
     index: int
 
@@ -205,9 +205,9 @@ class Spectrum:
         scan_start_time_cv = get_cv_record(scan, CvList.scan_start_time)
 
         if scan_start_time_cv.unit_cv == CvList.unit_minute:
-            self.retention_time = scan_start_time_cv.value_as(float) * 60
+            self.retention_time_seconds = scan_start_time_cv.value_as(float) * 60
         else:
-            self.retention_time = scan_start_time_cv.value_as(float)
+            self.retention_time_seconds = scan_start_time_cv.value_as(float)
 
 
     @property

@@ -39,13 +39,13 @@ class Predicate(abc.ABC):
         pass
 
 
-class RtWindowPredicate(Predicate):
-    def __init__(self, min_rt: float, max_rt: float):
-        self.min_rt = min_rt
-        self.max_rt = max_rt
+class RetentionTimePredicate(Predicate):
+    def __init__(self, min_rt_sec: float, max_rt_sec: float):
+        self.min_rt = min_rt_sec
+        self.max_rt = max_rt_sec
 
     def apply(self, spectrum: Spectrum, prev_spectra: List[Spectrum]) -> bool:
-        return self.min_rt <= spectrum.retention_time <= self.max_rt
+        return self.min_rt <= spectrum.retention_time_seconds <= self.max_rt
 
 
 class MsLevelFilter(Predicate):

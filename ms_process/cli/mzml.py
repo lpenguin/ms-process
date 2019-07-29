@@ -4,7 +4,7 @@ from typing import Union
 
 from ms_process.mzml import process_file
 from ms_process.processing.filters import AsFloat32Filter, ElectricNoiseFilter, SGolayFilter, ResamplerFilter, Filter, \
-    ConvertRtToMinutes, BaselineFilter, IndexPredicate, RtWindowPredicate, Predicate, CompressionFilter, MsLevelFilter, \
+    ConvertRtToMinutes, BaselineFilter, IndexPredicate, RetentionTimePredicate, Predicate, CompressionFilter, MsLevelFilter, \
     TypeFilter
 
 modifier_map = {
@@ -15,7 +15,7 @@ modifier_map = {
     'to_minutes': ConvertRtToMinutes,
     'baseline': BaselineFilter,
     'index': IndexPredicate,
-    'rt': RtWindowPredicate,
+    'rt': RetentionTimePredicate,
     'compress': CompressionFilter,
     'mslevel': MsLevelFilter,
     'type': TypeFilter
