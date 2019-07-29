@@ -2,7 +2,7 @@ import argparse
 import json
 from typing import Union
 
-from ms_process.mzml import process_file
+from ms_process.mzml import process_file, print_info
 from ms_process.processing.filters import AsFloat32Filter, ElectricNoiseFilter, SGolayFilter, ResamplerFilter, Filter, \
     ConvertRtToMinutes, BaselineFilter, IndexPredicate, RetentionTimePredicate, Predicate, CompressionFilter, MsLevelFilter, \
     TypeFilter
@@ -63,7 +63,6 @@ def main():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='command')
 
-
     filter_parser = subparsers.add_parser('filter', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # filter_parser.add_argument('--threshold-multiplier', default=3, type=int, help='electric noise filter threshold')
     # filter_parser.add_argument('--central-mz', '-c', type=float, default=800, help='central mz in resampler')
@@ -75,29 +74,36 @@ def main():
     filter_parser.add_argument('--limit', type=int)
     filter_parser.add_argument('--offset', type=int)
 
+    info_parser = subparsers.add_parser('info')
+    info_parser.add_argument('--input', '-i', required=True)
+    info_parser.add_argument('-V', '--verbose', action='store_true')
+
     args = parser.parse_args()
-    modifier = [
-        parse_filter(f)
-        for f in args.filter
-    ]
-
-    filters = [
-        f for f in modifier
-        if isinstance(f, Filter)
-    ]
-
-    predicates = [
-        f for f in modifier
-        if isinstance(f, Predicate)
-    ]
 
     if args.command == 'filter':
+        modifier = [
+            parse_filter(f)
+            for f in args.filter
+        ]
+
+        filters = [
+            f for f in modifier
+            if isinstance(f, Filter)
+        ]
+
+        predicates = [
+            f for f in modifier
+            if isinstance(f, Predicate)
+        ]
+
         process_file(
             args.input,
             args.output,
             filters,
             predicates,
         )
+    elif args.command == 'info':
+        print_info(args.input, args.verbose)
 
 
 if __name__ == '__main__':

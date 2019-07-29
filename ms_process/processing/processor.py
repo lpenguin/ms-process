@@ -63,6 +63,33 @@ def parse_spectrum(parser: LineEventsParser, spectrum_index: int)-> Spectrum:
     assert False
 
 
+def info_mzml(in_filename: str, verbose: bool):
+    if verbose:
+        open_f = open_with_progress
+    else:
+        open_f = open
+    with open_f(in_filename) as f:
+        parser = LineEventsParser(f)
+        spectrum_index = 0
+        indices = []
+        rts = []
+        ms_levels = []
+
+        for line, events in parser:
+            for action, elem in events:
+                if (action, elem.tag) == ('start', '{http://psi.hupo.org/ms/mzml}spectrum'):
+                    spectrum = parse_spectrum(parser, spectrum_index)
+                    spectrum_index += 1
+
+                    ms_levels.append(spectrum.ms_level)
+                    rts.append(spectrum.retention_time_seconds)
+                    indices.append(spectrum.index)
+
+        print(f'Total spectra: {spectrum_index}')
+        print(f'Ms level range: {min(ms_levels)} : {max(ms_levels)}')
+        print(f'Retention range: {min(rts)} : {max(rts)}')
+
+
 def process_mzml(in_filename: str,
                  out_filename: str,
                  last_ms1_specra_count: int,

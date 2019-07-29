@@ -3,7 +3,7 @@ from typing import Optional, Tuple
 import numpy as np
 import sys
 
-from .processing.processor import SpectrumIterator, process_mzml
+from .processing.processor import SpectrumIterator, process_mzml, info_mzml
 from ms_process.processing.filters import ElectricNoiseFilter, ResamplerFilter, SGolayFilter, AsFloat32Filter
 
 
@@ -19,3 +19,9 @@ def process_file(in_filename: str,
     #     AsFloat32Filter(),
     # ]
     process_mzml(in_filename, out_filename, last_ms1_specra_count=10, filters=filters, predicates=predicates)
+
+
+def print_info(in_filename: str, verbose: bool):
+    if verbose:
+        sys.stderr.write("Processing data...\n")
+    info_mzml(in_filename, verbose)
