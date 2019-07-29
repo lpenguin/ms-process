@@ -52,6 +52,10 @@ class BinaryDataArray:
         if self._data is not None:
             return self._data
 
+        if self.data_raw is None:
+            self._data = np.empty(0)
+            return self._data
+
         dtype = BinaryDataArray.dtype_from_precision(self.precision)
         compression = self.compression
 
@@ -117,7 +121,10 @@ class BinaryDataArray:
         else:
             raise Exception('no compression cvParam')
 
-        data_raw = xpath(elem, 'ns:binary/text()')[0]
+        data_text_el = xpath(elem, 'ns:binary/text()')
+
+        data_raw = data_text_el[0] if len(data_text_el) else None
+
         return BinaryDataArray(
             elem=elem,
             kind=kind,
