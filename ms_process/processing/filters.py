@@ -19,6 +19,8 @@ def collapse_zero_intensity_mut(mz_data: BinaryDataArray, intensity_data: Binary
     intensity = intensity_data.data
 
     N = 3
+    if mz.shape[0] <= N:
+        return
     cv = np.convolve((intensity > 0), np.ones((N,)) / N, mode='valid')
     cv = np.concatenate([arr1, cv, arr1])
     mz = mz[cv > 0]
